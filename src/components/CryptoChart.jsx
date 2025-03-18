@@ -1,7 +1,10 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useCryptoChart } from '../hooks/useCryptoData';
 import { format } from 'date-fns';
+import { Box, Flex, Spinner, Text, useToken } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
+
+const MotionBox = motion(Box);
 
 const timeFilters = {
   '1h': 0.042,
@@ -17,31 +20,28 @@ export default function CryptoChart({ cryptoId, timeFilter }) {
     timeFilters[timeFilter] || 1
   );
 
+  // Get theme colors
+  const [brandColor, accentPurple] = useToken('colors', ['brand.500', 'accent.purple']);
+
   if (isLoading) {
     return (
-      <div className="h-[400px] flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center space-x-3"
-        >
-          <div className="w-3 h-3 bg-accent-blue rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-          <div className="w-3 h-3 bg-accent-purple rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-          <div className="w-3 h-3 bg-accent-blue rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-        </motion.div>
-      </div>
+      <Flex h="400px" align="center" justify="center">
+        <Spinner
+          thickness="4px"
+          speed="0.65s"
+          emptyColor="gray.700"
+          color="brand.500"
+          size="xl"
+        />
+      </Flex>
     );
   }
 
   if (error) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="h-[400px] flex items-center justify-center text-accent-red"
-      >
-        Error loading chart data
-      </motion.div>
+      <Flex h="400px" align="center" justify="center">
+        <Text color="accent.red">Error loading chart data</Text>
+      </Flex>
     );
   }
 
@@ -71,58 +71,75 @@ export default function CryptoChart({ cryptoId, timeFilter }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-dark-card p-4 rounded-lg shadow-lg border border-dark-border backdrop-blur-xl">
-          <p className="text-sm text-gray-400">
+        <Box
+          bg="gray.800"
+          p={4}
+          borderRadius="lg"
+          border="1px"
+          borderColor="whiteAlpha.200"
+          boxShadow="lg"
+        >
+          <Text fontSize="sm" color="gray.400" mb={2}>
             {format(new Date(label), 'PPp')}
-          </p>
-          <p className="text-lg font-semibold bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
+          </Text>
+          <Text
+            fontSize="lg"
+            fontWeight="bold"
+            bgGradient={`linear(to-r, ${brandColor}, ${accentPurple})`}
+            bgClip="text"
+          >
             {formatYAxis(payload[0].value)}
-          </p>
-        </div>
+          </Text>
+        </Box>
       );
     }
     return null;
   };
 
   return (
-    <motion.div
+    <MotionBox
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="h-[400px] w-full"
+      h="400px"
+      w="full"
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+              <stop offset="5%" stopColor={brandColor} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={brandColor} stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="#1F2937"
+            stroke="gray.700"
+            opacity={0.1}
             vertical={false}
           />
           <XAxis
             dataKey="date"
             tickFormatter={formatXAxis}
-            tick={{ fill: '#9CA3AF' }}
-            stroke="#1F2937"
+            tick={{ fill: '#718096' }}
+            stroke="#2D3748"
+            axisLine={false}
             tickLine={false}
+            dy={10}
           />
           <YAxis
             tickFormatter={formatYAxis}
-            tick={{ fill: '#9CA3AF' }}
-            stroke="#1F2937"
+            tick={{ fill: '#718096' }}
+            stroke="#2D3748"
+            axisLine={false}
             tickLine={false}
             width={80}
-            domain={['auto', 'auto']}
+            dx={-10}
           />
           <Tooltip
             content={<CustomTooltip />}
             cursor={{
-              stroke: '#3B82F6',
+              stroke: brandColor,
               strokeWidth: 1,
               strokeDasharray: '3 3',
             }}
@@ -130,13 +147,13 @@ export default function CryptoChart({ cryptoId, timeFilter }) {
           <Area
             type="monotone"
             dataKey="price"
-            stroke="#3B82F6"
+            stroke={brandColor}
             strokeWidth={2}
             fillOpacity={1}
             fill="url(#colorPrice)"
           />
         </AreaChart>
       </ResponsiveContainer>
-    </motion.div>
+    </MotionBox>
   );
 } 
