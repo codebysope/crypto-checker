@@ -1,7 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ChakraProvider, extendTheme } from '@chakra-ui/react';
+import { ChakraProvider, ColorModeScript, extendTheme } from '@chakra-ui/react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
+import Charts from './pages/Charts';
+import News from './pages/News';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -20,12 +23,12 @@ const theme = extendTheme({
     useSystemColorMode: false,
   },
   styles: {
-    global: {
+    global: (props) => ({
       body: {
         bg: 'gray.900',
         color: 'white',
       },
-    },
+    }),
   },
   colors: {
     brand: {
@@ -84,10 +87,17 @@ const theme = extendTheme({
 function App() {
   return (
     <ChakraProvider theme={theme}>
+      <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <QueryClientProvider client={queryClient}>
-        <Layout>
-          <Dashboard />
-        </Layout>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/charts" element={<Charts />} />
+              <Route path="/news" element={<News />} />
+            </Routes>
+          </Layout>
+        </Router>
       </QueryClientProvider>
     </ChakraProvider>
   );
