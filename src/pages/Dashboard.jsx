@@ -25,13 +25,25 @@ import {
   InputGroup,
   InputLeftElement,
   Icon,
-  Select
+  Select,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  IconButton,
+  Tag,
+  TagLabel,
+  TagLeftIcon
 } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { useMarketData, useTopCryptos, formatNumber, formatPercentage } from '../hooks/useCryptoData';
 import CryptoChart from '../components/CryptoChart';
-import { FaCaretUp, FaCaretDown } from 'react-icons/fa';
-import { SearchIcon } from '@chakra-ui/icons';
+import { FaCaretUp, FaCaretDown, FaBitcoin } from 'react-icons/fa';
+import { SearchIcon, StarIcon, SettingsIcon } from '@chakra-ui/icons';
+import { useWatchlist } from '../hooks/useWatchlist';
+import { useRecentViews } from '../hooks/useRecentViews';
+import { useThemePreferences } from '../hooks/useThemePreferences';
+import { useNavigate } from 'react-router-dom';
 
 const MotionBox = motion(Box);
 const MotionCard = motion(Card);
@@ -78,6 +90,10 @@ export default function Dashboard() {
   const [sortConfig, setSortConfig] = useState({ key: 'market_cap', direction: 'desc' });
   const { data: marketData, isLoading: isLoadingMarket } = useMarketData();
   const { data: topCryptos, isLoading: isLoadingCryptos } = useTopCryptos(50);
+  const { watchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
+  const { recentViews, addToRecent } = useRecentViews();
+  const { preferences, updatePreference } = useThemePreferences();
+  const navigate = useNavigate();
 
   const tableBg = useColorModeValue('gray.800', 'gray.800');
   const hoverBg = useColorModeValue('gray.700', 'gray.700');
@@ -135,6 +151,32 @@ export default function Dashboard() {
         />
       </SimpleGrid>
 
+      {/* Recently Viewed Section */}
+      {recentViews.length > 0 && (
+        <Box mb={6}>
+          <VStack align="stretch" spacing={3}>
+            <Text fontSize="lg" fontWeight="medium" color="gray.400">
+              Recently Viewed
+            </Text>
+            <HStack spacing={4} overflow="auto" py={2}>
+              {recentViews.map(crypto => (
+                <Tag
+                  key={crypto.id}
+                  size="lg"
+                  variant="subtle"
+                  colorScheme="blue"
+                  cursor="pointer"
+                  onClick={() => navigate(`/crypto/${crypto.id}`)}
+                >
+                  <TagLeftIcon boxSize="12px" as={FaBitcoin} />
+                  <TagLabel>{crypto.name}</TagLabel>
+                </Tag>
+              ))}
+            </HStack>
+          </VStack>
+        </Box>
+      )}
+
       {/* Chart Section */}
       <Card overflow="hidden">
         <CardBody>
@@ -155,31 +197,55 @@ export default function Dashboard() {
               >
                 Bitcoin Price Chart
               </Text>
-              <ButtonGroup 
-                size="sm" 
-                isAttached 
-                variant="outline"
-                mt={{ base: 2, sm: 0 }}
-              >
-                {['1h', '24h', '7d', '30d', '1y'].map((filter) => (
-                  <Button
-                    key={filter}
-                    onClick={() => setTimeFilter(filter)}
-                    variant={timeFilter === filter ? 'solid' : 'outline'}
-                    bg={timeFilter === filter ? 'brand.500' : 'transparent'}
-                    _hover={{
-                      bg: timeFilter === filter ? 'brand.600' : 'whiteAlpha.100',
-                    }}
-                    px={{ base: 2, md: 4 }}
-                    fontSize={{ base: "xs", md: "sm" }}
-                  >
-                    {filter}
-                  </Button>
-                ))}
-              </ButtonGroup>
+              <HStack spacing={4}>
+                <ButtonGroup 
+                  size="sm" 
+                  isAttached 
+                  variant="outline"
+                  mt={{ base: 2, sm: 0 }}
+                >
+                  {['1h', '24h', '7d', '30d', '1y'].map((filter) => (
+                    <Button
+                      key={filter}
+                      onClick={() => setTimeFilter(filter)}
+                      variant={timeFilter === filter ? 'solid' : 'outline'}
+                      bg={timeFilter === filter ? 'brand.500' : 'transparent'}
+                      _hover={{
+                        bg: timeFilter === filter ? 'brand.600' : 'whiteAlpha.100',
+                      }}
+                      px={{ base: 2, md: 4 }}
+                      fontSize={{ base: "xs", md: "sm" }}
+                    >
+                      {filter}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+                <Menu>
+                  <MenuButton
+                    as={IconButton}
+                    icon={<SettingsIcon />}
+                    variant="ghost"
+                    aria-label="Chart settings"
+                    size="sm"
+                  />
+                  <MenuList>
+                    <MenuItem onClick={() => updatePreference('showVolume', !preferences.showVolume)}>
+                      {preferences.showVolume ? 'Hide' : 'Show'} Volume
+                    </MenuItem>
+                    <MenuItem onClick={() => updatePreference('timeFormat', preferences.timeFormat === '24h' ? '12h' : '24h')}>
+                      {preferences.timeFormat === '24h' ? '12h' : '24h'} Time Format
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
+              </HStack>
             </HStack>
             <Box h={{ base: "300px", md: "400px" }}>
-              <CryptoChart cryptoId="bitcoin" timeFilter={timeFilter} />
+              <CryptoChart 
+                cryptoId="bitcoin" 
+                timeFilter={timeFilter}
+                showVolume={preferences.showVolume}
+                timeFormat={preferences.timeFormat}
+              />
             </Box>
           </VStack>
         </CardBody>
@@ -270,10 +336,28 @@ export default function Dashboard() {
                         _hover={{ bg: hoverBg }}
                         transition="background-color 0.2s"
                         cursor="pointer"
+                        onClick={() => {
+                          addToRecent(crypto);
+                          navigate(`/crypto/${crypto.id}`);
+                        }}
                       >
                         <Td color="gray.400">{index + 1}</Td>
                         <Td>
                           <HStack spacing={3}>
+                            <IconButton
+                              icon={<StarIcon color={watchlist.includes(crypto.id) ? 'yellow.400' : 'gray.400'} />}
+                              variant="ghost"
+                              size="sm"
+                              aria-label={watchlist.includes(crypto.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (watchlist.includes(crypto.id)) {
+                                  removeFromWatchlist(crypto.id);
+                                } else {
+                                  addToWatchlist(crypto);
+                                }
+                              }}
+                            />
                             <Image
                               src={crypto.image}
                               alt={crypto.name}

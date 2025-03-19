@@ -166,26 +166,128 @@ export const getCryptoNews = async (category = 'ALL', limit = 12) => {
       params: {
         lang: 'EN',
         categories: category !== 'ALL' ? category : undefined,
-        sortOrder: 'popular',
-        limit
+        feeds: 'cryptocompare,cointelegraph,coindesk',
+        sortOrder: 'latest',
+        extraParams: 'CryptoVision',
+        limit: limit * 2 // Fetch more to ensure we have enough after filtering
       }
     });
 
+    // Process and clean the data
+    const articles = response.data.Data.map(article => ({
+      id: article.id,
+      guid: article.guid,
+      published_on: article.published_on,
+      imageurl: article.imageurl || 'https://images.cryptocompare.com/news/default.png',
+      title: article.title,
+      url: article.url,
+      body: article.body,
+      tags: article.tags ? article.tags.split('|').filter(Boolean) : [],
+      categories: article.categories ? 
+        article.categories.split('|')
+          .filter(Boolean)
+          .map(cat => cat.trim())
+          .filter(cat => cat.length > 0) : 
+        [],
+      source: article.source_info?.name || article.source,
+      source_info: {
+        name: article.source_info?.name || article.source,
+        lang: article.source_info?.lang || 'en',
+        img: article.source_info?.img
+      },
+      upvotes: article.upvotes || 0,
+      downvotes: article.downvotes || 0,
+      views: article.views || 0,
+      score: (article.upvotes || 0) - (article.downvotes || 0)
+    }));
+
+    // Filter out duplicates and articles without required fields
+    const uniqueArticles = articles.filter((article, index, self) =>
+      index === self.findIndex((a) => a.guid === article.guid) &&
+      article.title &&
+      article.body &&
+      article.published_on
+    );
+
+    // Sort articles by date (latest first)
+    const sortedArticles = uniqueArticles.slice(0, limit);
+
     return {
-      articles: response.data.Data.map(article => ({
-        ...article,
-        categories: article.categories.split('|').filter(Boolean),
-        tags: article.tags ? article.tags.split('|').filter(Boolean) : [],
-        published_at: new Date(article.published_on * 1000).toISOString(),
-        source: article.source_info?.name || article.source,
-        title: article.title,
-        url: article.url,
-        imageurl: article.imageurl,
-      })),
-      categories: newsCategories,
+      articles: sortedArticles,
+      categories: {
+        ALL: 'all',
+        TRADING: 'Trading',
+        TECHNOLOGY: 'Technology',
+        REGULATION: 'Regulation',
+        MINING: 'Mining',
+        DEFI: 'DeFi',
+        NFT: 'NFT',
+        METAVERSE: 'Metaverse',
+        GAMING: 'Gaming'
+      }
     };
   } catch (error) {
     console.error('Error fetching news:', error);
-    return { articles: [], categories: newsCategories };
+    return { articles: [], categories: {} };
+  }
+};
+
+export const getCryptoDetails = async (id) => {
+  try {
+    const response = await retryApiCall(() => 
+      cryptoApi.get(`/coins/${id}`, {
+        params: {
+          localization: false,
+          tickers: false,
+          market_data: true,
+          community_data: false,
+          developer_data: false,
+          sparkline: false
+        }
+      })
+    );
+
+    const data = response.data;
+    return {
+      id: data.id,
+      symbol: data.symbol,
+      name: data.name,
+      description: data.description,
+      image: data.image.large,
+      current_price: data.market_data.current_price.usd,
+      market_cap: data.market_data.market_cap.usd,
+      market_cap_rank: data.market_cap_rank,
+      total_volume: data.market_data.total_volume.usd,
+      high_24h: data.market_data.high_24h.usd,
+      low_24h: data.market_data.low_24h.usd,
+      price_change_24h: data.market_data.price_change_24h,
+      price_change_percentage_24h: data.market_data.price_change_percentage_24h,
+      circulating_supply: data.market_data.circulating_supply,
+      total_supply: data.market_data.total_supply,
+      max_supply: data.market_data.max_supply,
+      ath: data.market_data.ath.usd,
+      ath_change_percentage: data.market_data.ath_change_percentage.usd,
+      ath_date: data.market_data.ath_date.usd,
+      atl: data.market_data.atl.usd,
+      atl_change_percentage: data.market_data.atl_change_percentage.usd,
+      atl_date: data.market_data.atl_date.usd,
+      categories: data.categories,
+      links: {
+        homepage: data.links.homepage,
+        blockchain_site: data.links.blockchain_site,
+        official_forum_url: data.links.official_forum_url,
+        chat_url: data.links.chat_url,
+        announcement_url: data.links.announcement_url,
+        twitter_screen_name: data.links.twitter_screen_name,
+        facebook_username: data.links.facebook_username,
+        telegram_channel_identifier: data.links.telegram_channel_identifier,
+        subreddit_url: data.links.subreddit_url,
+        repos_url: data.links.repos_url,
+        github: data.links.repos_url.github,
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching crypto details:', error);
+    throw new Error('Failed to fetch cryptocurrency details');
   }
 }; 

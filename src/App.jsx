@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Charts from './pages/Charts';
 import News from './pages/News';
+import CryptoDetails from './pages/CryptoDetails';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -95,6 +96,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/charts" element={<Charts />} />
               <Route path="/news" element={<News />} />
+              <Route path="/crypto/:id" element={<CryptoDetails />} />
             </Routes>
           </Layout>
         </Router>

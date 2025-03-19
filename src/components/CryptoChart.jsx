@@ -41,7 +41,7 @@ const timeFilters = {
   '1y': '1y',
 };
 
-const CustomTooltip = ({ active, payload, label, currency = 'USD' }) => {
+const CustomTooltip = ({ active, payload, label, currency = 'USD', timeFormat }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const priceChange = ((data.close - data.open) / data.open) * 100;
@@ -50,7 +50,7 @@ const CustomTooltip = ({ active, payload, label, currency = 'USD' }) => {
     return (
       <Card bg="gray.800" p={4} borderRadius="lg" border="1px" borderColor="whiteAlpha.200">
         <Text color="gray.400" mb={2}>
-          {format(new Date(label), 'PPp')}
+          {format(new Date(label), timeFormat === '24h' ? 'HH:mm' : 'hh:mm a')}
         </Text>
         <StatGroup>
           <Stat>
@@ -86,7 +86,7 @@ const CustomTooltip = ({ active, payload, label, currency = 'USD' }) => {
   return null;
 };
 
-export default function CryptoChart({ cryptoId, timeFilter }) {
+export default function CryptoChart({ cryptoId, timeFilter, showVolume = true, timeFormat = '24h' }) {
   const [retryKey, setRetryKey] = useState(0);
   const toast = useToast();
   const { data, isLoading, error, refetch } = useCryptoChart(
@@ -169,9 +169,9 @@ export default function CryptoChart({ cryptoId, timeFilter }) {
     const date = new Date(timestamp);
     switch (timeFilter) {
       case '1h':
-        return format(date, 'HH:mm');
+        return format(date, timeFormat === '24h' ? 'HH:mm' : 'hh:mm a');
       case '24h':
-        return format(date, 'HH:mm');
+        return format(date, timeFormat === '24h' ? 'HH:mm' : 'hh:mm a');
       case '7d':
         return format(date, 'MMM dd');
       case '30d':
@@ -231,18 +231,20 @@ export default function CryptoChart({ cryptoId, timeFilter }) {
             domain={['auto', 'auto']}
             width={80}
           />
-          <YAxis
-            yAxisId="volume"
-            orientation="right"
-            tickFormatter={formatVolumeAxis}
-            tick={{ fill: '#718096', fontSize: '12px' }}
-            stroke="#2D3748"
-            axisLine={false}
-            tickLine={false}
-            width={65}
-          />
+          {showVolume && (
+            <YAxis
+              yAxisId="volume"
+              orientation="right"
+              tickFormatter={formatVolumeAxis}
+              tick={{ fill: '#718096', fontSize: '12px' }}
+              stroke="#2D3748"
+              axisLine={false}
+              tickLine={false}
+              width={65}
+            />
+          )}
           <Tooltip 
-            content={<CustomTooltip />}
+            content={<CustomTooltip timeFormat={timeFormat} />}
             wrapperStyle={{ zIndex: 1000 }}
           />
           <ReferenceLine
@@ -251,13 +253,15 @@ export default function CryptoChart({ cryptoId, timeFilter }) {
             stroke={brandColor}
             strokeDasharray="3 3"
           />
-          <Bar
-            yAxisId="volume"
-            dataKey="volume"
-            fill={brandColor}
-            opacity={0.2}
-            barSize={20}
-          />
+          {showVolume && (
+            <Bar
+              yAxisId="volume"
+              dataKey="volume"
+              fill={brandColor}
+              opacity={0.2}
+              barSize={20}
+            />
+          )}
           <Area
             yAxisId="price"
             type="monotone"
@@ -293,12 +297,14 @@ export default function CryptoChart({ cryptoId, timeFilter }) {
             <Text fontSize="xs" color="gray.400">Price</Text>
           </HStack>
         </Tooltip>
-        <Tooltip label="Trading volume">
-          <HStack spacing={2}>
-            <Box w={3} h={3} bg={brandColor} opacity={0.2} />
-            <Text fontSize="xs" color="gray.400">Volume</Text>
-          </HStack>
-        </Tooltip>
+        {showVolume && (
+          <Tooltip label="Trading volume">
+            <HStack spacing={2}>
+              <Box w={3} h={3} bg={brandColor} opacity={0.2} />
+              <Text fontSize="xs" color="gray.400">Volume</Text>
+            </HStack>
+          </Tooltip>
+        )}
       </HStack>
     </MotionBox>
   );
